@@ -5,55 +5,1039 @@
 //  Created by Pluie on 23/04/2026.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \Project.name) private var projects: [Project]
+    @Query(sort: \ProjectTemplate.name) private var templates: [ProjectTemplate]
+
+    @State private var selection: SidebarSelection?
+    @State private var presentedSheet: PresentedSheet?
 
     var body: some View {
         NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+            List(selection: $selection) {
+                Section("Projects") {
+                    ForEach(projects) { project in
+                        ProjectSidebarRow(project: project)
+                            .tag(SidebarSelection.project(project.persistentModelID))
                     }
+                    .onDelete(perform: deleteProjects)
                 }
-                .onDelete(perform: deleteItems)
+
+                Section("Templates") {
+                    ForEach(templates) { template in
+                        Label(template.name, systemImage: "doc.text")
+                            .tag(SidebarSelection.template(template.persistentModelID))
+                    }
+                    .onDelete(perform: deleteTemplates)
+                }
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationTitle("Preparation")
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260)
             .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                ToolbarItemGroup {
+                    Button("New Project", systemImage: "plus") {
+                        presentedSheet = .newProject
+                    }
+                    .disabled(templates.isEmpty)
+
+                    Button("New Template", systemImage: "doc.badge.plus") {
+                        presentedSheet = .newTemplate
                     }
                 }
             }
         } detail: {
-            Text("Select an item")
+            detailView
+        }
+        .sheet(item: $presentedSheet) { sheet in
+            switch sheet {
+            case .newProject:
+                NewProjectSheet(templates: templates) { project in
+                    modelContext.insert(project)
+                    selection = .project(project.persistentModelID)
+                }
+            case .newTemplate:
+                NewTemplateSheet { template in
+                    modelContext.insert(template)
+                    selection = .template(template.persistentModelID)
+                }
+            }
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    @ViewBuilder
+    private var detailView: some View {
+        switch selection {
+        case .project(let id):
+            if let project = projects.first(where: { $0.persistentModelID == id }) {
+                ProjectDetailView(project: project)
+            } else {
+                EmptyStateView(
+                    title: "Project Missing",
+                    systemImage: "questionmark.folder",
+                    description: "Select an existing project or create a new one."
+                )
+            }
+        case .template(let id):
+            if let template = templates.first(where: { $0.persistentModelID == id }) {
+                TemplateDetailView(template: template)
+            } else {
+                EmptyStateView(
+                    title: "Template Missing",
+                    systemImage: "questionmark.doc",
+                    description: "Select an existing template or create a new one."
+                )
+            }
+        case nil:
+            EmptyStateView(
+                title: "Choose a Project or Template",
+                systemImage: "checklist",
+                description: templates.isEmpty
+                    ? "Create a template first, then use it to prepare projects."
+                    : "Select an item from the sidebar to start editing."
+            )
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
+    private func deleteProjects(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(items[index])
+                let project = projects[index]
+                if selection == .project(project.persistentModelID) {
+                    selection = nil
+                }
+                modelContext.delete(project)
+            }
+        }
+    }
+
+    private func deleteTemplates(offsets: IndexSet) {
+        withAnimation {
+            for index in offsets {
+                let template = templates[index]
+                if selection == .template(template.persistentModelID) {
+                    selection = nil
+                }
+                modelContext.delete(template)
             }
         }
     }
 }
 
+private struct ProjectSidebarRow: View {
+    let project: Project
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Label(project.name, systemImage: "folder")
+
+            Spacer(minLength: 4)
+
+            if let warning = project.scheduleWarning() {
+                ProjectScheduleWarningIcon(warning: warning)
+            }
+        }
+    }
+}
+
+private struct ProjectScheduleWarningIcon: View {
+    let warning: ProjectScheduleWarning
+
+    var body: some View {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(warning.level.tint)
+            .accessibilityLabel(warning.level.accessibilityLabel)
+            .help(warning.helpText)
+    }
+}
+
+private extension ProjectScheduleWarningLevel {
+    var tint: Color {
+        switch self {
+        case .warning:
+            .orange
+        case .critical:
+            .red
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .warning:
+            "Project preparation warning"
+        case .critical:
+            "Project preparation critical warning"
+        }
+    }
+
+}
+
+private extension ProjectScheduleWarning {
+    var helpText: String {
+        switch daysUntilStart {
+        case Int.min ..< 0:
+            "This project started \(abs(daysUntilStart)) \(abs(daysUntilStart) == 1 ? "day" : "days") ago."
+        case 0:
+            "This project starts today."
+        case 1:
+            "This project starts in 1 day."
+        default:
+            "This project starts in \(daysUntilStart) days."
+        }
+    }
+}
+
+private enum SidebarSelection: Hashable {
+    case project(PersistentIdentifier)
+    case template(PersistentIdentifier)
+}
+
+private enum PresentedSheet: Identifiable {
+    case newProject
+    case newTemplate
+
+    var id: String {
+        switch self {
+        case .newProject:
+            "new-project"
+        case .newTemplate:
+            "new-template"
+        }
+    }
+}
+
+private struct EmptyStateView: View {
+    let title: String
+    let systemImage: String
+    let description: String
+
+    var body: some View {
+        ContentUnavailableView(
+            title,
+            systemImage: systemImage,
+            description: Text(description)
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct NewTemplateSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+
+    let onCreate: (ProjectTemplate) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Template name", text: $name)
+            }
+            .formStyle(.grouped)
+            .frame(minWidth: 360)
+            .navigationTitle("New Template")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        createTemplate()
+                    }
+                    .disabled(trimmedName.isEmpty)
+                }
+            }
+        }
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func createTemplate() {
+        onCreate(ProjectTemplate(name: trimmedName))
+        dismiss()
+    }
+}
+
+private struct NewProjectSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let templates: [ProjectTemplate]
+    let onCreate: (Project) -> Void
+
+    @State private var name = ""
+    @State private var includesStartDate = false
+    @State private var startDate = Date()
+    @State private var selectedTemplateID: PersistentIdentifier?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Project name", text: $name)
+
+                Toggle("Set start date", isOn: $includesStartDate)
+
+                if includesStartDate {
+                    DatePicker("Start date", selection: $startDate, displayedComponents: .date)
+                }
+
+                Picker("Template", selection: $selectedTemplateID) {
+                    ForEach(templates) { template in
+                        Text(template.name)
+                            .tag(Optional(template.persistentModelID))
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .frame(minWidth: 420)
+            .navigationTitle("New Project")
+            .onAppear {
+                selectedTemplateID = selectedTemplateID ?? templates.first?.persistentModelID
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        createProject()
+                    }
+                    .disabled(trimmedName.isEmpty || selectedTemplate == nil)
+                }
+            }
+        }
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var selectedTemplate: ProjectTemplate? {
+        guard let selectedTemplateID else {
+            return nil
+        }
+
+        return templates.first { $0.persistentModelID == selectedTemplateID }
+    }
+
+    private func createProject() {
+        guard let selectedTemplate else {
+            return
+        }
+
+        let project = Project(
+            name: trimmedName,
+            startDate: includesStartDate ? startDate : nil,
+            template: selectedTemplate
+        )
+        onCreate(project)
+        dismiss()
+    }
+}
+
+private struct TemplateDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var template: ProjectTemplate
+
+    var body: some View {
+        Form {
+            Section("Template") {
+                TextField("Name", text: $template.name)
+            }
+
+            Section("Steps") {
+                OrderedTemplateStepList(
+                    template: template,
+                    onAdd: addStep,
+                    onDelete: deleteStep
+                )
+            }
+
+            Section("Link Names") {
+                OrderedTemplateLinkList(
+                    template: template,
+                    onAdd: addLink,
+                    onDelete: deleteLink
+                )
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(template.name.isEmpty ? "Untitled Template" : template.name)
+    }
+
+    private func addStep() {
+        let step = TemplateStep(name: "New step", sortOrder: template.steps.nextSortOrder)
+        step.template = template
+        modelContext.insert(step)
+        template.steps.append(step)
+    }
+
+    private func deleteStep(_ step: TemplateStep) {
+        modelContext.delete(step)
+        renumber(template.orderedSteps.filter { $0.persistentModelID != step.persistentModelID })
+    }
+
+    private func addLink() {
+        let link = TemplateLink(name: "New link", sortOrder: template.links.nextSortOrder)
+        link.template = template
+        modelContext.insert(link)
+        template.links.append(link)
+    }
+
+    private func deleteLink(_ link: TemplateLink) {
+        modelContext.delete(link)
+        renumber(template.orderedLinks.filter { $0.persistentModelID != link.persistentModelID })
+    }
+
+}
+
+private struct OrderedTemplateStepList: View {
+    @Bindable var template: ProjectTemplate
+    @State private var draggedStepID: PersistentIdentifier?
+
+    let onAdd: () -> Void
+    let onDelete: (TemplateStep) -> Void
+
+    var body: some View {
+        let steps = template.orderedSteps
+
+        if steps.isEmpty {
+            Text("No steps yet.")
+                .foregroundStyle(.secondary)
+        }
+
+        ForEach(steps, id: \.persistentModelID) { step in
+            TemplateStepRow(
+                step: step,
+                onDelete: { onDelete(step) }
+            )
+            .reorderable(
+                item: step,
+                items: steps,
+                draggedItemID: $draggedStepID,
+                isDragging: draggedStepID == step.persistentModelID
+            )
+        }
+
+        Button("Add Step", systemImage: "plus", action: onAdd)
+    }
+}
+
+private struct OrderedTemplateLinkList: View {
+    @Bindable var template: ProjectTemplate
+    @State private var draggedLinkID: PersistentIdentifier?
+
+    let onAdd: () -> Void
+    let onDelete: (TemplateLink) -> Void
+
+    var body: some View {
+        let links = template.orderedLinks
+
+        if links.isEmpty {
+            Text("No link names yet.")
+                .foregroundStyle(.secondary)
+        }
+
+        ForEach(links, id: \.persistentModelID) { link in
+            TemplateLinkRow(
+                link: link,
+                onDelete: { onDelete(link) }
+            )
+            .reorderable(
+                item: link,
+                items: links,
+                draggedItemID: $draggedLinkID,
+                isDragging: draggedLinkID == link.persistentModelID
+            )
+        }
+
+        Button("Add Link Name", systemImage: "plus", action: onAdd)
+    }
+}
+
+private struct DragHandle: View {
+    var body: some View {
+        Image(systemName: "line.3.horizontal")
+            .foregroundStyle(.tertiary)
+            .font(.system(size: 13, weight: .semibold))
+            .frame(width: 22)
+            .help("Drag to reorder")
+            .accessibilityLabel("Drag to reorder")
+    }
+}
+
+private struct ReorderableRowModifier<Item: SortOrdered & PersistentModel>: ViewModifier {
+    let item: Item
+    let items: [Item]
+    @Binding var draggedItemID: PersistentIdentifier?
+    let isDragging: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isDragging ? 0.45 : 1)
+            .contentShape(.rect)
+            .onDrag {
+                draggedItemID = item.persistentModelID
+                return NSItemProvider(object: String(describing: item.persistentModelID) as NSString)
+            }
+            .onDrop(
+                of: [.plainText],
+                delegate: ReorderDropDelegate(
+                    targetItem: item,
+                    items: items,
+                    draggedItemID: $draggedItemID
+                )
+            )
+    }
+}
+
+private struct ReorderDropDelegate<Item: SortOrdered & PersistentModel>: DropDelegate {
+    let targetItem: Item
+    let items: [Item]
+    @Binding var draggedItemID: PersistentIdentifier?
+
+    func dropEntered(info: DropInfo) {
+        guard let draggedItemID,
+              draggedItemID != targetItem.persistentModelID,
+              let sourceIndex = items.firstIndex(where: { $0.persistentModelID == draggedItemID }),
+              let targetIndex = items.firstIndex(where: { $0.persistentModelID == targetItem.persistentModelID }) else {
+            return
+        }
+
+        var reorderedItems = items
+        reorderedItems.move(
+            fromOffsets: IndexSet(integer: sourceIndex),
+            toOffset: targetIndex > sourceIndex ? targetIndex + 1 : targetIndex
+        )
+        renumber(reorderedItems)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItemID = nil
+        return true
+    }
+}
+
+private extension View {
+    func reorderable<Item: SortOrdered & PersistentModel>(
+        item: Item,
+        items: [Item],
+        draggedItemID: Binding<PersistentIdentifier?>,
+        isDragging: Bool
+    ) -> some View {
+        modifier(
+            ReorderableRowModifier(
+                item: item,
+                items: items,
+                draggedItemID: draggedItemID,
+                isDragging: isDragging
+            )
+        )
+    }
+}
+
+private struct ConfirmingDeleteButton: View {
+    let itemName: String
+    let onConfirm: () -> Void
+
+    @State private var isConfirmingDelete = false
+
+    var body: some View {
+        Button("Delete", systemImage: "trash", role: .destructive) {
+            isConfirmingDelete = true
+        }
+        .labelStyle(.iconOnly)
+        .confirmationDialog(
+            "Delete \(itemName)?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete \(itemName)", role: .destructive, action: onConfirm)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This cannot be undone.")
+        }
+    }
+}
+
+private struct TemplateStepRow: View {
+    @Bindable var step: TemplateStep
+
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack {
+            DragHandle()
+
+            TextField("Step name", text: $step.name)
+
+            Spacer()
+
+            ConfirmingDeleteButton(itemName: "step", onConfirm: onDelete)
+        }
+    }
+}
+
+private struct TemplateLinkRow: View {
+    @Bindable var link: TemplateLink
+
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack {
+            DragHandle()
+
+            TextField("Link name", text: $link.name)
+
+            Spacer()
+
+            ConfirmingDeleteButton(itemName: "link", onConfirm: onDelete)
+        }
+    }
+}
+
+private struct ProjectDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var project: Project
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("Project name", text: $project.name)
+                        .font(.title2)
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+
+                    OptionalProjectDatePicker(title: "Start date", date: $project.startDate)
+
+                    ProjectHeaderLinkButtons(project: project)
+
+                    ProjectProgressHeader(project: project)
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section("Steps") {
+                OrderedProjectStepList(
+                    project: project,
+                    onAdd: addStep,
+                    onDelete: deleteStep
+                )
+            }
+
+            Section("Links") {
+                OrderedProjectLinkList(
+                    project: project,
+                    onAdd: addLink,
+                    onDelete: deleteLink
+                )
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(project.name.isEmpty ? "Untitled Project" : project.name)
+    }
+
+    private func addStep() {
+        let step = ProjectStep(title: "New step", sortOrder: project.steps.nextSortOrder)
+        step.project = project
+        modelContext.insert(step)
+        project.steps.append(step)
+    }
+
+    private func deleteStep(_ step: ProjectStep) {
+        modelContext.delete(step)
+        renumber(project.orderedSteps.filter { $0.persistentModelID != step.persistentModelID })
+    }
+
+    private func addLink() {
+        let link = ProjectLink(name: "New link", sortOrder: project.links.nextSortOrder)
+        link.project = project
+        modelContext.insert(link)
+        project.links.append(link)
+    }
+
+    private func deleteLink(_ link: ProjectLink) {
+        modelContext.delete(link)
+        renumber(project.orderedLinks.filter { $0.persistentModelID != link.persistentModelID })
+    }
+
+}
+
+private struct ProjectHeaderLinkButtons: View {
+    let project: Project
+
+    var body: some View {
+        let links = project.orderedLinks
+
+        if links.isEmpty == false {
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(links, id: \.persistentModelID) { link in
+                        ProjectHeaderLinkButton(link: link)
+                    }
+                }
+                .padding(.vertical, 1)
+            }
+        }
+    }
+}
+
+private struct ProjectHeaderLinkButton: View {
+    @Environment(\.openURL) private var openURL
+    @Bindable var link: ProjectLink
+
+    var body: some View {
+        Button {
+            guard let url = link.resolvedURL else {
+                return
+            }
+
+            openURL(url)
+        } label: {
+            Label(title, systemImage: link.hasValidURL ? "link" : "exclamationmark.circle.fill")
+                .lineLimit(1)
+        }
+        .buttonStyle(.bordered)
+        .tint(link.hasValidURL ? .accentColor : .red)
+        .foregroundStyle(link.hasValidURL ? Color.primary : Color.red)
+        .accessibilityHint(link.hasValidURL ? "Opens this link." : "Add a valid URL to make this link openable.")
+    }
+
+    private var title: String {
+        let trimmedName = link.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "Untitled link" : trimmedName
+    }
+}
+
+private struct ProjectProgressHeader: View {
+    let project: Project
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Preparation progress")
+                Spacer()
+                Text("\(project.completedProgressItems) of \(project.totalProgressItems)")
+                    .foregroundStyle(.secondary)
+            }
+
+            ProgressView(value: project.progress)
+
+            Text("\(Int((project.progress * 100).rounded()))% complete")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct OrderedProjectStepList: View {
+    @Bindable var project: Project
+    @State private var draggedStepID: PersistentIdentifier?
+
+    let onAdd: () -> Void
+    let onDelete: (ProjectStep) -> Void
+
+    var body: some View {
+        let steps = project.orderedSteps
+
+        if steps.isEmpty {
+            Text("No steps yet.")
+                .foregroundStyle(.secondary)
+        }
+
+        ForEach(steps, id: \.persistentModelID) { step in
+            ProjectStepRow(
+                step: step,
+                onDelete: { onDelete(step) }
+            )
+            .reorderable(
+                item: step,
+                items: steps,
+                draggedItemID: $draggedStepID,
+                isDragging: draggedStepID == step.persistentModelID
+            )
+        }
+
+        Button("Add Step", systemImage: "plus", action: onAdd)
+    }
+}
+
+private struct OrderedProjectLinkList: View {
+    @Bindable var project: Project
+    @State private var draggedLinkID: PersistentIdentifier?
+
+    let onAdd: () -> Void
+    let onDelete: (ProjectLink) -> Void
+
+    var body: some View {
+        let links = project.orderedLinks
+
+        if links.isEmpty {
+            Text("No links yet.")
+                .foregroundStyle(.secondary)
+        }
+
+        ForEach(links, id: \.persistentModelID) { link in
+            ProjectLinkRow(
+                link: link,
+                onDelete: { onDelete(link) }
+            )
+            .reorderable(
+                item: link,
+                items: links,
+                draggedItemID: $draggedLinkID,
+                isDragging: draggedLinkID == link.persistentModelID
+            )
+        }
+
+        Button("Add Link", systemImage: "plus", action: onAdd)
+    }
+}
+
+private struct ProjectStepRow: View {
+    @Bindable var step: ProjectStep
+
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            DragHandle()
+
+            StatusCheckbox(status: statusBinding)
+
+            TextField("Step", text: $step.title)
+                .labelsHidden()
+                .textFieldStyle(.plain)
+
+            Spacer(minLength: 12)
+
+            OptionalProjectDatePicker(title: "Date", date: $step.scheduledDate)
+
+            ConfirmingDeleteButton(itemName: "step", onConfirm: onDelete)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var statusBinding: Binding<ProjectStepStatus> {
+        Binding(
+            get: { step.status },
+            set: { step.status = $0 }
+        )
+    }
+}
+
+private struct StatusCheckbox: View {
+    @Binding var status: ProjectStepStatus
+
+    var body: some View {
+        Button {
+            status = status.next
+        } label: {
+            HStack(spacing: 8) {
+                ZStack {
+                    if status == .planned {
+                        PlannedHalfFill()
+                            .fill(status.fillStyle)
+                            .frame(width: 17, height: 17)
+                    } else {
+                        Circle()
+                            .fill(status.fillStyle)
+                            .frame(width: 17, height: 17)
+                    }
+
+                    Circle()
+                        .strokeBorder(status.strokeStyle, lineWidth: 1.8)
+                        .frame(width: 17, height: 17)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(status.symbolStyle)
+                        .opacity(status == .done ? 1 : 0)
+                }
+
+                StatusBadge(status: status)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Step status")
+        .accessibilityValue(status.title)
+        .accessibilityHint("Cycles between todo, planned, and done.")
+    }
+}
+
+private struct StatusBadge: View {
+    let status: ProjectStepStatus
+
+    var body: some View {
+        Text(status.title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(status.badgeForegroundStyle)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(status.badgeBackgroundStyle, in: Capsule())
+    }
+}
+
+private struct PlannedHalfFill: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addArc(
+                center: CGPoint(x: rect.midX, y: rect.midY),
+                radius: min(rect.width, rect.height) / 2,
+                startAngle: .degrees(-90),
+                endAngle: .degrees(90),
+                clockwise: false
+            )
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+            path.closeSubpath()
+        }
+    }
+}
+
+private extension ProjectStepStatus {
+    var fillStyle: Color {
+        switch self {
+        case .todo:
+            .clear
+        case .planned:
+            .orange
+        case .done:
+            .green
+        }
+    }
+
+    var strokeStyle: Color {
+        switch self {
+        case .todo:
+            .secondary
+        case .planned:
+            .orange
+        case .done:
+            .green
+        }
+    }
+
+    var symbolStyle: Color {
+        switch self {
+        case .todo:
+            .clear
+        case .planned:
+            .orange
+        case .done:
+            .white
+        }
+    }
+
+    var badgeForegroundStyle: Color {
+        switch self {
+        case .todo:
+            .secondary
+        case .planned:
+            .orange
+        case .done:
+            .green
+        }
+    }
+
+    var badgeBackgroundStyle: Color {
+        switch self {
+        case .todo:
+            .secondary.opacity(0.12)
+        case .planned:
+            .orange.opacity(0.14)
+        case .done:
+            .green.opacity(0.14)
+        }
+    }
+}
+
+private struct ProjectLinkRow: View {
+    @Bindable var link: ProjectLink
+
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            DragHandle()
+
+            TextField("Link", text: $link.name)
+                .labelsHidden()
+                .textFieldStyle(.plain)
+                .frame(minWidth: 120)
+
+            TextField("URL", text: $link.urlString)
+                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+
+            Image(systemName: link.hasValidURL ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(link.hasValidURL ? .green : .secondary)
+                .accessibilityLabel(link.hasValidURL ? "URL complete" : "URL missing")
+
+            ConfirmingDeleteButton(itemName: "link", onConfirm: onDelete)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct OptionalProjectDatePicker: View {
+    let title: String
+    @Binding var date: Date?
+
+    var body: some View {
+        HStack {
+            if date == nil {
+                Button("Add \(title.lowercased())", systemImage: "calendar.badge.plus") {
+                    date = .now
+                }
+                .labelStyle(.iconOnly)
+                .accessibilityLabel("Add \(title.lowercased())")
+            } else {
+                DatePicker(title, selection: dateBinding, displayedComponents: .date)
+                    .labelsHidden()
+
+                Button("Clear", systemImage: "xmark.circle") {
+                    date = nil
+                }
+                .labelStyle(.iconOnly)
+            }
+        }
+    }
+
+    private var dateBinding: Binding<Date> {
+        Binding(
+            get: { date ?? .now },
+            set: { date = $0 }
+        )
+    }
+}
+
+private func renumber<Item: SortOrdered>(_ items: [Item]) {
+    for (index, item) in items.enumerated() {
+        item.sortOrder = index
+    }
+}
+
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: AppModelSchema.models, inMemory: true)
 }
