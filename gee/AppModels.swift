@@ -16,6 +16,7 @@ enum AppModelSchema {
         Project.self,
         ProjectStep.self,
         ProjectLink.self,
+        ProjectEvent.self,
     ]
 
     static var schema: Schema {
@@ -126,6 +127,7 @@ final class Project {
     var templateName: String
     var createdAt: Date
     var archivedAt: Date?
+    var ongoingStartedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \ProjectStep.project)
     var steps: [ProjectStep]
@@ -133,22 +135,29 @@ final class Project {
     @Relationship(deleteRule: .cascade, inverse: \ProjectLink.project)
     var links: [ProjectLink]
 
+    @Relationship(deleteRule: .cascade, inverse: \ProjectEvent.project)
+    var events: [ProjectEvent]
+
     init(
         name: String,
         startDate: Date? = nil,
         templateName: String,
         createdAt: Date = .now,
         archivedAt: Date? = nil,
+        ongoingStartedAt: Date? = nil,
         steps: [ProjectStep] = [],
-        links: [ProjectLink] = []
+        links: [ProjectLink] = [],
+        events: [ProjectEvent] = []
     ) {
         self.name = name
         self.startDate = startDate
         self.templateName = templateName
         self.createdAt = createdAt
         self.archivedAt = archivedAt
+        self.ongoingStartedAt = ongoingStartedAt
         self.steps = steps
         self.links = links
+        self.events = events
     }
 
     convenience init(name: String, startDate: Date? = nil, template: ProjectTemplate) {
@@ -173,8 +182,26 @@ final class Project {
         links.sortedBySortOrder()
     }
 
+    var orderedEvents: [ProjectEvent] {
+        events.sorted {
+            if $0.eventDate == $1.eventDate {
+                if $0.sortOrder == $1.sortOrder {
+                    return $0.persistentModelID.hashValue < $1.persistentModelID.hashValue
+                }
+
+                return $0.sortOrder < $1.sortOrder
+            }
+
+            return $0.eventDate > $1.eventDate
+        }
+    }
+
     var isArchived: Bool {
         archivedAt != nil
+    }
+
+    var isOngoing: Bool {
+        ongoingStartedAt != nil
     }
 
     var totalProgressItems: Int {
@@ -196,6 +223,7 @@ final class Project {
     func scheduleWarning(relativeTo referenceDate: Date = .now, calendar: Calendar = .current) -> ProjectScheduleWarning? {
         guard let startDate,
               isArchived == false,
+              isOngoing == false,
               completedProgressItems < totalProgressItems else {
             return nil
         }
@@ -281,6 +309,22 @@ final class ProjectLink {
     }
 }
 
+@Model
+final class ProjectEvent {
+    var title: String
+    var notes: String
+    var eventDate: Date
+    var sortOrder: Int
+    var project: Project?
+
+    init(title: String, notes: String = "", eventDate: Date = .now, sortOrder: Int) {
+        self.title = title
+        self.notes = notes
+        self.eventDate = eventDate
+        self.sortOrder = sortOrder
+    }
+}
+
 protocol SortOrdered: AnyObject {
     var sortOrder: Int { get set }
 }
@@ -289,6 +333,7 @@ extension TemplateStep: SortOrdered {}
 extension TemplateLink: SortOrdered {}
 extension ProjectStep: SortOrdered {}
 extension ProjectLink: SortOrdered {}
+extension ProjectEvent: SortOrdered {}
 
 extension Array where Element: SortOrdered & PersistentModel {
     func sortedBySortOrder() -> [Element] {

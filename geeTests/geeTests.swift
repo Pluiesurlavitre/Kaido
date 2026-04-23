@@ -27,6 +27,7 @@ struct GeeTests {
 
         #expect(project.templateName == "Client Launch")
         #expect(project.isArchived == false)
+        #expect(project.isOngoing == false)
         #expect(project.orderedSteps.map(\.title) == ["First", "Second"])
         #expect(project.orderedLinks.map(\.name) == ["Brief", "Assets"])
 
@@ -144,6 +145,32 @@ struct GeeTests {
 
         project.archivedAt = nil
         #expect(project.isArchived == false)
+        #expect(project.scheduleWarningLevel(relativeTo: referenceDate, calendar: calendar) == .critical)
+    }
+
+    @Test("Ongoing projects track state, suppress warnings, and sort timeline events")
+    @MainActor
+    func ongoingProjectsUseTimelineEvents() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 23)))
+        let project = Project(
+            name: "Ongoing",
+            startDate: referenceDate.addingTimeInterval(7 * 24 * 60 * 60),
+            templateName: "Manual",
+            ongoingStartedAt: referenceDate
+        )
+        project.steps = [ProjectStep(title: "Still todo", sortOrder: 0, status: .todo)]
+        project.events = [
+            ProjectEvent(title: "Older", eventDate: referenceDate.addingTimeInterval(-24 * 60 * 60), sortOrder: 0),
+            ProjectEvent(title: "Latest", eventDate: referenceDate, sortOrder: 1),
+        ]
+
+        #expect(project.isOngoing)
+        #expect(project.scheduleWarning(relativeTo: referenceDate, calendar: calendar) == nil)
+        #expect(project.orderedEvents.map(\.title) == ["Latest", "Older"])
+
+        project.ongoingStartedAt = nil
+        #expect(project.isOngoing == false)
         #expect(project.scheduleWarningLevel(relativeTo: referenceDate, calendar: calendar) == .critical)
     }
 

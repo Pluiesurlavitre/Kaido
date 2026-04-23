@@ -29,6 +29,16 @@ struct ContentView: View {
                     .onDelete(perform: deleteActiveProjects)
                 }
 
+                if ongoingProjects.isEmpty == false {
+                    Section("Ongoing projects") {
+                        ForEach(ongoingProjects) { project in
+                            ProjectSidebarRow(project: project)
+                                .tag(SidebarSelection.project(project.persistentModelID))
+                        }
+                        .onDelete(perform: deleteOngoingProjects)
+                    }
+                }
+
                 if archivedProjects.isEmpty == false {
                     DisclosureGroup(isExpanded: $isArchivedProjectsExpanded) {
                         ForEach(archivedProjects) { project in
@@ -89,7 +99,11 @@ struct ContentView: View {
     }
 
     private var activeProjects: [Project] {
-        projects.filter { $0.isArchived == false }
+        projects.filter { $0.isArchived == false && $0.isOngoing == false }
+    }
+
+    private var ongoingProjects: [Project] {
+        projects.filter { $0.isArchived == false && $0.isOngoing }
     }
 
     private var archivedProjects: [Project] {
@@ -134,6 +148,10 @@ struct ContentView: View {
         deleteProjects(offsets: offsets, from: activeProjects)
     }
 
+    private func deleteOngoingProjects(offsets: IndexSet) {
+        deleteProjects(offsets: offsets, from: ongoingProjects)
+    }
+
     private func deleteArchivedProjects(offsets: IndexSet) {
         deleteProjects(offsets: offsets, from: archivedProjects)
     }
@@ -168,7 +186,7 @@ private struct ProjectSidebarRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Label(project.name, systemImage: project.isArchived ? "archivebox" : "folder")
+            Label(project.name, systemImage: project.sidebarSystemImage)
 
             Spacer(minLength: 4)
 
@@ -176,6 +194,20 @@ private struct ProjectSidebarRow: View {
                 ProjectScheduleWarningIcon(warning: warning)
             }
         }
+    }
+}
+
+private extension Project {
+    var sidebarSystemImage: String {
+        if isArchived {
+            return "archivebox"
+        }
+
+        if isOngoing {
+            return "play.circle"
+        }
+
+        return "folder"
     }
 }
 
@@ -664,17 +696,29 @@ private struct ProjectDetailView: View {
 
                     ProjectHeaderLinkButtons(project: project)
 
-                    ProjectProgressHeader(project: project)
+                    if project.isOngoing == false {
+                        ProjectProgressHeader(project: project)
+                    }
                 }
                 .padding(.vertical, 4)
             }
 
-            Section("Steps") {
-                OrderedProjectStepList(
-                    project: project,
-                    onAdd: addStep,
-                    onDelete: deleteStep
-                )
+            if project.isOngoing {
+                Section("Timeline") {
+                    OrderedProjectEventList(
+                        project: project,
+                        onAdd: addEvent,
+                        onDelete: deleteEvent
+                    )
+                }
+            } else {
+                Section("Steps") {
+                    OrderedProjectStepList(
+                        project: project,
+                        onAdd: addStep,
+                        onDelete: deleteStep
+                    )
+                }
             }
 
             Section("Links") {
@@ -688,9 +732,19 @@ private struct ProjectDetailView: View {
         .formStyle(.grouped)
         .navigationTitle(project.name.isEmpty ? "Untitled Project" : project.name)
         .toolbar {
-            ToolbarItem {
+            ToolbarItemGroup {
+                if project.isArchived == false {
+                    Button(project.isOngoing ? "Move to Preparation" : "Move to Ongoing", systemImage: project.isOngoing ? "checklist" : "play.circle") {
+                        project.ongoingStartedAt = project.isOngoing ? nil : .now
+                    }
+                }
+
                 Button(project.isArchived ? "Unarchive Project" : "Archive Project", systemImage: project.isArchived ? "archivebox.fill" : "archivebox") {
-                    project.archivedAt = project.isArchived ? nil : .now
+                    if project.isArchived {
+                        project.archivedAt = nil
+                    } else {
+                        project.archivedAt = .now
+                    }
                 }
             }
         }
@@ -718,6 +772,23 @@ private struct ProjectDetailView: View {
     private func deleteLink(_ link: ProjectLink) {
         modelContext.delete(link)
         renumber(project.orderedLinks.filter { $0.persistentModelID != link.persistentModelID })
+    }
+
+    private func addEvent(title: String, notes: String, eventDate: Date) {
+        let event = ProjectEvent(
+            title: title,
+            notes: notes,
+            eventDate: eventDate,
+            sortOrder: project.events.nextSortOrder
+        )
+        event.project = project
+        modelContext.insert(event)
+        project.events.append(event)
+    }
+
+    private func deleteEvent(_ event: ProjectEvent) {
+        modelContext.delete(event)
+        renumber(project.orderedEvents.filter { $0.persistentModelID != event.persistentModelID })
     }
 
 }
@@ -851,6 +922,134 @@ private struct OrderedProjectLinkList: View {
         }
 
         Button("Add Link", systemImage: "plus", action: onAdd)
+    }
+}
+
+private struct OrderedProjectEventList: View {
+    @Bindable var project: Project
+
+    let onAdd: (_ title: String, _ notes: String, _ eventDate: Date) -> Void
+    let onDelete: (ProjectEvent) -> Void
+
+    var body: some View {
+        let events = project.orderedEvents
+
+        ProjectEventComposer(onAdd: onAdd)
+
+        if events.isEmpty {
+            Text("No events yet.")
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+        }
+
+        ForEach(events, id: \.persistentModelID) { event in
+            ProjectEventRow(
+                event: event,
+                onDelete: { onDelete(event) }
+            )
+        }
+    }
+}
+
+private struct ProjectEventComposer: View {
+    let onAdd: (_ title: String, _ notes: String, _ eventDate: Date) -> Void
+
+    @State private var eventDate: Date = .now
+    @State private var eventText = ""
+
+    private let editorInset = EdgeInsets(top: 8, leading: 5, bottom: 8, trailing: 5)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            DatePicker("Event date", selection: $eventDate, displayedComponents: .date)
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $eventText)
+                    .frame(minHeight: 90)
+
+                if eventText.isEmpty {
+                    Text("Add a timeline event...")
+                        .foregroundStyle(.secondary)
+                        .padding(editorInset)
+                        .allowsHitTesting(false)
+                }
+            }
+            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(.tertiary, lineWidth: 1)
+            }
+
+            HStack {
+                Spacer()
+
+                Button("Add Event", systemImage: "plus") {
+                    addEvent()
+                }
+                .disabled(trimmedEventText.isEmpty)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var trimmedEventText: String {
+        eventText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func addEvent() {
+        let title = trimmedEventText
+        onAdd(title, "", eventDate)
+        eventText = ""
+        eventDate = .now
+    }
+}
+
+private struct ProjectEventRow: View {
+    let event: ProjectEvent
+
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            TimelineMarker()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.eventDate, format: .dateTime.day().month().year())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(event.title)
+                    .font(.body)
+                    .textSelection(.enabled)
+
+                if event.notes.isEmpty == false {
+                    Text(event.notes)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            ConfirmingDeleteButton(itemName: "event", onConfirm: onDelete)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+private struct TimelineMarker: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 9, height: 9)
+
+            Rectangle()
+                .fill(.tertiary)
+                .frame(width: 1)
+        }
+        .frame(width: 14)
+        .frame(minHeight: 54)
     }
 }
 
