@@ -16,16 +16,35 @@ struct ContentView: View {
 
     @State private var selection: SidebarSelection?
     @State private var presentedSheet: PresentedSheet?
+    @State private var isArchivedProjectsExpanded = false
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 Section("Projects") {
-                    ForEach(projects) { project in
+                    ForEach(activeProjects) { project in
                         ProjectSidebarRow(project: project)
                             .tag(SidebarSelection.project(project.persistentModelID))
                     }
-                    .onDelete(perform: deleteProjects)
+                    .onDelete(perform: deleteActiveProjects)
+                }
+
+                if archivedProjects.isEmpty == false {
+                    DisclosureGroup(isExpanded: $isArchivedProjectsExpanded) {
+                        ForEach(archivedProjects) { project in
+                            ProjectSidebarRow(project: project)
+                                .tag(SidebarSelection.project(project.persistentModelID))
+                        }
+                        .onDelete(perform: deleteArchivedProjects)
+                    } label: {
+                        HStack {
+                            Label("Archived", systemImage: "archivebox")
+                            Spacer()
+                            Text("\(archivedProjects.count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section("Templates") {
@@ -69,6 +88,14 @@ struct ContentView: View {
         }
     }
 
+    private var activeProjects: [Project] {
+        projects.filter { $0.isArchived == false }
+    }
+
+    private var archivedProjects: [Project] {
+        projects.filter(\.isArchived)
+    }
+
     @ViewBuilder
     private var detailView: some View {
         switch selection {
@@ -103,10 +130,18 @@ struct ContentView: View {
         }
     }
 
-    private func deleteProjects(offsets: IndexSet) {
+    private func deleteActiveProjects(offsets: IndexSet) {
+        deleteProjects(offsets: offsets, from: activeProjects)
+    }
+
+    private func deleteArchivedProjects(offsets: IndexSet) {
+        deleteProjects(offsets: offsets, from: archivedProjects)
+    }
+
+    private func deleteProjects(offsets: IndexSet, from projectList: [Project]) {
         withAnimation {
             for index in offsets {
-                let project = projects[index]
+                let project = projectList[index]
                 if selection == .project(project.persistentModelID) {
                     selection = nil
                 }
@@ -133,7 +168,7 @@ private struct ProjectSidebarRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Label(project.name, systemImage: "folder")
+            Label(project.name, systemImage: project.isArchived ? "archivebox" : "folder")
 
             Spacer(minLength: 4)
 
@@ -652,6 +687,13 @@ private struct ProjectDetailView: View {
         }
         .formStyle(.grouped)
         .navigationTitle(project.name.isEmpty ? "Untitled Project" : project.name)
+        .toolbar {
+            ToolbarItem {
+                Button(project.isArchived ? "Unarchive Project" : "Archive Project", systemImage: project.isArchived ? "archivebox.fill" : "archivebox") {
+                    project.archivedAt = project.isArchived ? nil : .now
+                }
+            }
+        }
     }
 
     private func addStep() {

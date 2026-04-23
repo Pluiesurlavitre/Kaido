@@ -125,6 +125,7 @@ final class Project {
     var startDate: Date?
     var templateName: String
     var createdAt: Date
+    var archivedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \ProjectStep.project)
     var steps: [ProjectStep]
@@ -137,6 +138,7 @@ final class Project {
         startDate: Date? = nil,
         templateName: String,
         createdAt: Date = .now,
+        archivedAt: Date? = nil,
         steps: [ProjectStep] = [],
         links: [ProjectLink] = []
     ) {
@@ -144,6 +146,7 @@ final class Project {
         self.startDate = startDate
         self.templateName = templateName
         self.createdAt = createdAt
+        self.archivedAt = archivedAt
         self.steps = steps
         self.links = links
     }
@@ -170,6 +173,10 @@ final class Project {
         links.sortedBySortOrder()
     }
 
+    var isArchived: Bool {
+        archivedAt != nil
+    }
+
     var totalProgressItems: Int {
         steps.count + links.count
     }
@@ -188,6 +195,7 @@ final class Project {
 
     func scheduleWarning(relativeTo referenceDate: Date = .now, calendar: Calendar = .current) -> ProjectScheduleWarning? {
         guard let startDate,
+              isArchived == false,
               completedProgressItems < totalProgressItems else {
             return nil
         }

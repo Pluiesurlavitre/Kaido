@@ -26,6 +26,7 @@ struct GeeTests {
         let project = Project(name: "Acme", template: template)
 
         #expect(project.templateName == "Client Launch")
+        #expect(project.isArchived == false)
         #expect(project.orderedSteps.map(\.title) == ["First", "Second"])
         #expect(project.orderedLinks.map(\.name) == ["Brief", "Assets"])
 
@@ -123,6 +124,27 @@ struct GeeTests {
 
         project.steps[0].status = .done
         #expect(project.scheduleWarningLevel(relativeTo: referenceDate, calendar: calendar) == nil)
+    }
+
+    @Test("Archived projects track archive state and suppress schedule warnings")
+    @MainActor
+    func archivedProjectsSuppressWarnings() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 23)))
+        let project = Project(
+            name: "Archived",
+            startDate: referenceDate.addingTimeInterval(7 * 24 * 60 * 60),
+            templateName: "Manual",
+            archivedAt: referenceDate
+        )
+        project.steps = [ProjectStep(title: "Still todo", sortOrder: 0, status: .todo)]
+
+        #expect(project.isArchived)
+        #expect(project.scheduleWarning(relativeTo: referenceDate, calendar: calendar) == nil)
+
+        project.archivedAt = nil
+        #expect(project.isArchived == false)
+        #expect(project.scheduleWarningLevel(relativeTo: referenceDate, calendar: calendar) == .critical)
     }
 
     private func makeInMemoryContainer() throws -> ModelContainer {
