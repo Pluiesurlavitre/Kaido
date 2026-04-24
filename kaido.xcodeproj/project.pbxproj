@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 7A7582F32F9AA97A0033EAED /* Build configuration list for PBXProject "gee" */;
+			buildConfigurationList = 7A7582F32F9AA97A0033EAED /* Build configuration list for PBXProject "kaido" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -538,7 +538,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7A7582F32F9AA97A0033EAED /* Build configuration list for PBXProject "gee" */ = {
+		7A7582F32F9AA97A0033EAED /* Build configuration list for PBXProject "kaido" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7A7583192F9AA97C0033EAED /* Debug */,
