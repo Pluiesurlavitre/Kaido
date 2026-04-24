@@ -10,6 +10,7 @@ import SwiftData
 
 enum AppModelSchema {
     static let models: [any PersistentModel.Type] = [
+        ProjectFolder.self,
         ProjectTemplate.self,
         TemplateStep.self,
         TemplateLink.self,
@@ -67,6 +68,21 @@ enum ProjectScheduleWarningLevel: Equatable {
 struct ProjectScheduleWarning: Equatable {
     let level: ProjectScheduleWarningLevel
     let daysUntilStart: Int
+}
+
+@Model
+final class ProjectFolder {
+    var name: String
+    var createdAt: Date
+
+    @Relationship(deleteRule: .nullify, inverse: \Project.folder)
+    var projects: [Project]
+
+    init(name: String, createdAt: Date = .now, projects: [Project] = []) {
+        self.name = name
+        self.createdAt = createdAt
+        self.projects = projects
+    }
 }
 
 @Model
@@ -128,6 +144,7 @@ final class Project {
     var createdAt: Date
     var archivedAt: Date?
     var ongoingStartedAt: Date?
+    var folder: ProjectFolder?
 
     @Relationship(deleteRule: .cascade, inverse: \ProjectStep.project)
     var steps: [ProjectStep]
@@ -145,6 +162,7 @@ final class Project {
         createdAt: Date = .now,
         archivedAt: Date? = nil,
         ongoingStartedAt: Date? = nil,
+        folder: ProjectFolder? = nil,
         steps: [ProjectStep] = [],
         links: [ProjectLink] = [],
         events: [ProjectEvent] = []
@@ -155,6 +173,7 @@ final class Project {
         self.createdAt = createdAt
         self.archivedAt = archivedAt
         self.ongoingStartedAt = ongoingStartedAt
+        self.folder = folder
         self.steps = steps
         self.links = links
         self.events = events

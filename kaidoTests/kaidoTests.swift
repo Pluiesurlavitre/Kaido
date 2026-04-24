@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 import Testing
-@testable import gee
+@testable import Kaido
 
 struct GeeTests {
     @Test("Creating a project snapshots ordered template content")
@@ -172,6 +172,23 @@ struct GeeTests {
         project.ongoingStartedAt = nil
         #expect(project.isOngoing == false)
         #expect(project.scheduleWarningLevel(relativeTo: referenceDate, calendar: calendar) == .critical)
+    }
+
+
+    @Test("Projects can be assigned to folders across preparation and ongoing states")
+    @MainActor
+    func projectFoldersPersistAcrossStates() throws {
+        let folder = ProjectFolder(name: "Q1 2026")
+        let project = Project(name: "Launch", templateName: "Manual", folder: folder)
+
+        #expect(project.folder?.name == "Q1 2026")
+        project.ongoingStartedAt = .now
+        #expect(project.isOngoing)
+        #expect(project.folder?.name == "Q1 2026")
+
+        project.archivedAt = .now
+        #expect(project.isArchived)
+        #expect(project.folder?.name == "Q1 2026")
     }
 
     private func makeInMemoryContainer() throws -> ModelContainer {

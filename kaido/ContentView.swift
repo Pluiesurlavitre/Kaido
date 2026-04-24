@@ -12,30 +12,37 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Project.name) private var projects: [Project]
+    @Query(sort: \ProjectFolder.name) private var folders: [ProjectFolder]
     @Query(sort: \ProjectTemplate.name) private var templates: [ProjectTemplate]
 
     @State private var selection: SidebarSelection?
     @State private var presentedSheet: PresentedSheet?
+    @State private var expandedPreparationFolderIDs: Set<PersistentIdentifier> = []
+    @State private var expandedOngoingFolderIDs: Set<PersistentIdentifier> = []
     @State private var isArchivedProjectsExpanded = false
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 Section("Projects") {
-                    ForEach(activeProjects) { project in
-                        ProjectSidebarRow(project: project)
-                            .tag(SidebarSelection.project(project.persistentModelID))
-                    }
-                    .onDelete(perform: deleteActiveProjects)
+                    ProjectFolderedSidebarList(
+                        folders: folders,
+                        projects: activeProjects,
+                        expandedFolderIDs: $expandedPreparationFolderIDs,
+                        selection: $selection,
+                        onDelete: deleteProjects
+                    )
                 }
 
                 if ongoingProjects.isEmpty == false {
                     Section("Ongoing projects") {
-                        ForEach(ongoingProjects) { project in
-                            ProjectSidebarRow(project: project)
-                                .tag(SidebarSelection.project(project.persistentModelID))
-                        }
-                        .onDelete(perform: deleteOngoingProjects)
+                        ProjectFolderedSidebarList(
+                            folders: folders,
+                            projects: ongoingProjects,
+                            expandedFolderIDs: $expandedOngoingFolderIDs,
+                            selection: $selection,
+                            onDelete: deleteProjects
+                        )
                     }
                 }
 
@@ -57,6 +64,14 @@ struct ContentView: View {
                     }
                 }
 
+                Section("Folders") {
+                    ForEach(folders) { folder in
+                        Label(folder.name, systemImage: "folder")
+                            .tag(SidebarSelection.folder(folder.persistentModelID))
+                    }
+                    .onDelete(perform: deleteFolders)
+                }
+
                 Section("Templates") {
                     ForEach(templates) { template in
                         Label(template.name, systemImage: "doc.text")
@@ -66,13 +81,17 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Preparation")
-            .navigationSplitViewColumnWidth(min: 220, ideal: 260)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320)
             .toolbar {
                 ToolbarItemGroup {
                     Button("New Project", systemImage: "plus") {
                         presentedSheet = .newProject
                     }
                     .disabled(templates.isEmpty)
+
+                    Button("New Folder", systemImage: "folder.badge.plus") {
+                        presentedSheet = .newFolder
+                    }
 
                     Button("New Template", systemImage: "doc.badge.plus") {
                         presentedSheet = .newTemplate
@@ -85,7 +104,7 @@ struct ContentView: View {
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .newProject:
-                NewProjectSheet(templates: templates) { project in
+                NewProjectSheet(templates: templates, folders: folders) { project in
                     modelContext.insert(project)
                     selection = .project(project.persistentModelID)
                 }
@@ -93,6 +112,11 @@ struct ContentView: View {
                 NewTemplateSheet { template in
                     modelContext.insert(template)
                     selection = .template(template.persistentModelID)
+                }
+            case .newFolder:
+                NewFolderSheet { folder in
+                    modelContext.insert(folder)
+                    selection = .folder(folder.persistentModelID)
                 }
             }
         }
@@ -115,7 +139,7 @@ struct ContentView: View {
         switch selection {
         case .project(let id):
             if let project = projects.first(where: { $0.persistentModelID == id }) {
-                ProjectDetailView(project: project)
+                ProjectDetailView(project: project, folders: folders)
             } else {
                 EmptyStateView(
                     title: "Project Missing",
@@ -133,6 +157,25 @@ struct ContentView: View {
                     description: "Select an existing template or create a new one."
                 )
             }
+        case .folder(let id):
+            if let folder = folders.first(where: { $0.persistentModelID == id }) {
+                FolderDetailView(
+                    folder: folder,
+                    projects: projects,
+                    onSelectProject: { project in
+                        selection = .project(project.persistentModelID)
+                    },
+                    onDelete: {
+                        deleteFolder(folder)
+                    }
+                )
+            } else {
+                EmptyStateView(
+                    title: "Folder Missing",
+                    systemImage: "questionmark.folder",
+                    description: "Select an existing folder or create a new one."
+                )
+            }
         case nil:
             EmptyStateView(
                 title: "Choose a Project or Template",
@@ -142,14 +185,6 @@ struct ContentView: View {
                     : "Select an item from the sidebar to start editing."
             )
         }
-    }
-
-    private func deleteActiveProjects(offsets: IndexSet) {
-        deleteProjects(offsets: offsets, from: activeProjects)
-    }
-
-    private func deleteOngoingProjects(offsets: IndexSet) {
-        deleteProjects(offsets: offsets, from: ongoingProjects)
     }
 
     private func deleteArchivedProjects(offsets: IndexSet) {
@@ -166,6 +201,30 @@ struct ContentView: View {
                 modelContext.delete(project)
             }
         }
+    }
+
+    private func deleteFolders(offsets: IndexSet) {
+        let foldersToDelete = offsets.map { folders[$0] }
+
+        withAnimation {
+            for folder in foldersToDelete {
+                deleteFolder(folder)
+            }
+        }
+    }
+
+    private func deleteFolder(_ folder: ProjectFolder) {
+        let folderID = folder.persistentModelID
+
+        if selection == .folder(folderID) {
+            selection = nil
+        }
+
+        for project in projects where project.folder?.persistentModelID == folderID {
+            project.folder = nil
+        }
+
+        modelContext.delete(folder)
     }
 
     private func deleteTemplates(offsets: IndexSet) {
@@ -259,14 +318,84 @@ private extension ProjectScheduleWarning {
     }
 }
 
+
+private struct ProjectFolderedSidebarList: View {
+    let folders: [ProjectFolder]
+    let projects: [Project]
+    @Binding var expandedFolderIDs: Set<PersistentIdentifier>
+    @Binding var selection: SidebarSelection?
+    let onDelete: (_ offsets: IndexSet, _ projects: [Project]) -> Void
+
+    var body: some View {
+        ForEach(unfiledProjects) { project in
+            ProjectSidebarRow(project: project)
+                .tag(SidebarSelection.project(project.persistentModelID))
+        }
+        .onDelete { offsets in
+            onDelete(offsets, unfiledProjects)
+        }
+
+        ForEach(visibleFolders) { folder in
+            let folderProjects = projects(in: folder)
+
+            DisclosureGroup(isExpanded: expandedBinding(for: folder)) {
+                ForEach(folderProjects) { project in
+                    ProjectSidebarRow(project: project)
+                        .tag(SidebarSelection.project(project.persistentModelID))
+                }
+                .onDelete { offsets in
+                    onDelete(offsets, folderProjects)
+                }
+            } label: {
+                HStack {
+                    Label(folder.name, systemImage: "folder")
+                    Spacer()
+                    Text("\(folderProjects.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var unfiledProjects: [Project] {
+        projects.filter { $0.folder == nil }
+    }
+
+    private var visibleFolders: [ProjectFolder] {
+        folders.filter { folder in
+            projects.contains { $0.folder?.persistentModelID == folder.persistentModelID }
+        }
+    }
+
+    private func projects(in folder: ProjectFolder) -> [Project] {
+        projects.filter { $0.folder?.persistentModelID == folder.persistentModelID }
+    }
+
+    private func expandedBinding(for folder: ProjectFolder) -> Binding<Bool> {
+        Binding(
+            get: { expandedFolderIDs.contains(folder.persistentModelID) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedFolderIDs.insert(folder.persistentModelID)
+                } else {
+                    expandedFolderIDs.remove(folder.persistentModelID)
+                }
+            }
+        )
+    }
+}
+
 private enum SidebarSelection: Hashable {
     case project(PersistentIdentifier)
+    case folder(PersistentIdentifier)
     case template(PersistentIdentifier)
 }
 
 private enum PresentedSheet: Identifiable {
     case newProject
     case newTemplate
+    case newFolder
 
     var id: String {
         switch self {
@@ -274,6 +403,8 @@ private enum PresentedSheet: Identifiable {
             "new-project"
         case .newTemplate:
             "new-template"
+        case .newFolder:
+            "new-folder"
         }
     }
 }
@@ -290,6 +421,170 @@ private struct EmptyStateView: View {
             description: Text(description)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+
+private struct FolderDetailView: View {
+    @Bindable var folder: ProjectFolder
+    let projects: [Project]
+    let onSelectProject: (Project) -> Void
+    let onDelete: () -> Void
+
+    @State private var isConfirmingDelete = false
+
+    var body: some View {
+        Form {
+            Section("Folder") {
+                TextField("Folder name", text: $folder.name)
+
+                LabeledContent("Projects", value: "\(folderProjects.count)")
+            }
+
+            Section("Assigned Projects") {
+                if folderProjects.isEmpty {
+                    Text("No projects in this folder.")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(folderProjects) { project in
+                    FolderProjectRow(
+                        project: project,
+                        onSelect: { onSelectProject(project) },
+                        onRemove: { project.folder = nil }
+                    )
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(folderTitle)
+        .toolbar {
+            ToolbarItem {
+                Button("Delete Folder", systemImage: "trash", role: .destructive) {
+                    isConfirmingDelete = true
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete \(folderTitle)?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Folder", role: .destructive, action: onDelete)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Projects in this folder will stay in your project list.")
+        }
+    }
+
+    private var folderTitle: String {
+        let trimmedName = folder.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "Untitled Folder" : trimmedName
+    }
+
+    private var folderProjects: [Project] {
+        projects
+            .filter { $0.folder?.persistentModelID == folder.persistentModelID }
+            .sorted { first, second in
+                if first.folderStatusTitle == second.folderStatusTitle {
+                    return first.name.localizedStandardCompare(second.name) == .orderedAscending
+                }
+
+                return first.folderStatusSortOrder < second.folderStatusSortOrder
+            }
+    }
+}
+
+private struct FolderProjectRow: View {
+    let project: Project
+    let onSelect: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button(action: onSelect) {
+                Label(project.name, systemImage: project.sidebarSystemImage)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+
+            Text(project.folderStatusTitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Button("Remove from Folder", systemImage: "xmark.circle", action: onRemove)
+                .labelStyle(.iconOnly)
+                .help("Remove from folder")
+        }
+    }
+}
+
+private extension Project {
+    var folderStatusTitle: String {
+        if isArchived {
+            return "Archived"
+        }
+
+        if isOngoing {
+            return "Ongoing"
+        }
+
+        return "Preparation"
+    }
+
+    var folderStatusSortOrder: Int {
+        if isArchived {
+            return 2
+        }
+
+        if isOngoing {
+            return 1
+        }
+
+        return 0
+    }
+}
+
+
+private struct NewFolderSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+
+    let onCreate: (ProjectFolder) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Folder name", text: $name)
+            }
+            .formStyle(.grouped)
+            .frame(minWidth: 360)
+            .navigationTitle("New Folder")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        createFolder()
+                    }
+                    .disabled(trimmedName.isEmpty)
+                }
+            }
+        }
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func createFolder() {
+        onCreate(ProjectFolder(name: trimmedName))
+        dismiss()
     }
 }
 
@@ -339,12 +634,14 @@ private struct NewProjectSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let templates: [ProjectTemplate]
+    let folders: [ProjectFolder]
     let onCreate: (Project) -> Void
 
     @State private var name = ""
     @State private var includesStartDate = false
     @State private var startDate = Date()
     @State private var selectedTemplateID: PersistentIdentifier?
+    @State private var selectedFolderID: PersistentIdentifier?
 
     var body: some View {
         NavigationStack {
@@ -361,6 +658,16 @@ private struct NewProjectSheet: View {
                     ForEach(templates) { template in
                         Text(template.name)
                             .tag(Optional(template.persistentModelID))
+                    }
+                }
+
+                Picker("Folder", selection: $selectedFolderID) {
+                    Text("No folder")
+                        .tag(Optional<PersistentIdentifier>.none)
+
+                    ForEach(folders) { folder in
+                        Text(folder.name)
+                            .tag(Optional(folder.persistentModelID))
                     }
                 }
             }
@@ -399,6 +706,14 @@ private struct NewProjectSheet: View {
         return templates.first { $0.persistentModelID == selectedTemplateID }
     }
 
+    private var selectedFolder: ProjectFolder? {
+        guard let selectedFolderID else {
+            return nil
+        }
+
+        return folders.first { $0.persistentModelID == selectedFolderID }
+    }
+
     private func createProject() {
         guard let selectedTemplate else {
             return
@@ -409,6 +724,7 @@ private struct NewProjectSheet: View {
             startDate: includesStartDate ? startDate : nil,
             template: selectedTemplate
         )
+        project.folder = selectedFolder
         onCreate(project)
         dismiss()
     }
@@ -682,6 +998,7 @@ private struct TemplateLinkRow: View {
 private struct ProjectDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var project: Project
+    let folders: [ProjectFolder]
 
     var body: some View {
         Form {
@@ -693,6 +1010,8 @@ private struct ProjectDetailView: View {
                         .textFieldStyle(.plain)
 
                     OptionalProjectDatePicker(title: "Start date", date: $project.startDate)
+
+                    ProjectFolderPicker(folders: folders, selectedFolder: folderBinding)
 
                     ProjectHeaderLinkButtons(project: project)
 
@@ -750,6 +1069,13 @@ private struct ProjectDetailView: View {
         }
     }
 
+    private var folderBinding: Binding<ProjectFolder?> {
+        Binding(
+            get: { project.folder },
+            set: { project.folder = $0 }
+        )
+    }
+
     private func addStep() {
         let step = ProjectStep(title: "New step", sortOrder: project.steps.nextSortOrder)
         step.project = project
@@ -791,6 +1117,33 @@ private struct ProjectDetailView: View {
         renumber(project.orderedEvents.filter { $0.persistentModelID != event.persistentModelID })
     }
 
+}
+
+
+private struct ProjectFolderPicker: View {
+    let folders: [ProjectFolder]
+    @Binding var selectedFolder: ProjectFolder?
+
+    var body: some View {
+        Picker("Folder", selection: folderIDBinding) {
+            Text("No folder")
+                .tag(Optional<PersistentIdentifier>.none)
+
+            ForEach(folders) { folder in
+                Text(folder.name)
+                    .tag(Optional(folder.persistentModelID))
+            }
+        }
+    }
+
+    private var folderIDBinding: Binding<PersistentIdentifier?> {
+        Binding(
+            get: { selectedFolder?.persistentModelID },
+            set: { selectedFolderID in
+                selectedFolder = folders.first { $0.persistentModelID == selectedFolderID }
+            }
+        )
+    }
 }
 
 private struct ProjectHeaderLinkButtons: View {

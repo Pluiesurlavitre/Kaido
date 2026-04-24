@@ -12,19 +12,19 @@
 			containerPortal = 7A7582F02F9AA97A0033EAED /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 7A7582F72F9AA97A0033EAED;
-			remoteInfo = gee;
+			remoteInfo = kaido;
 		};
 		7A7583122F9AA97C0033EAED /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7A7582F02F9AA97A0033EAED /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 7A7582F72F9AA97A0033EAED;
-			remoteInfo = gee;
+			remoteInfo = kaido;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7A7582F82F9AA97A0033EAED /* Kaido.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kaido.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A7582F82F9AA97A0033EAED /* kaido.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kaido.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A7583072F9AA97C0033EAED /* kaidoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kaidoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kaidoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,7 +85,7 @@
 		7A7582F92F9AA97A0033EAED /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7A7582F82F9AA97A0033EAED /* Kaido.app */,
+				7A7582F82F9AA97A0033EAED /* kaido.app */,
 				7A7583072F9AA97C0033EAED /* kaidoTests.xctest */,
 				7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */,
 			);
@@ -113,8 +113,8 @@
 			name = kaido;
 			packageProductDependencies = (
 			);
-			productName = gee;
-			productReference = 7A7582F82F9AA97A0033EAED /* Kaido.app */;
+			productName = kaido;
+			productReference = 7A7582F82F9AA97A0033EAED /* kaido.app */;
 			productType = "com.apple.product-type.application";
 		};
 		7A7583062F9AA97C0033EAED /* kaidoTests */ = {
@@ -136,7 +136,7 @@
 			name = kaidoTests;
 			packageProductDependencies = (
 			);
-			productName = geeTests;
+			productName = kaidoTests;
 			productReference = 7A7583072F9AA97C0033EAED /* kaidoTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -159,7 +159,7 @@
 			name = kaidoUITests;
 			packageProductDependencies = (
 			);
-			productName = geeUITests;
+			productName = kaidoUITests;
 			productReference = 7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -411,7 +411,8 @@
 				);
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tristan-rollet.kaido";
-				PRODUCT_NAME = Kaido;
+				PRODUCT_MODULE_NAME = Kaido;
+				PRODUCT_NAME = kaido;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -444,7 +445,8 @@
 				);
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tristan-rollet.kaido";
-				PRODUCT_NAME = Kaido;
+				PRODUCT_MODULE_NAME = Kaido;
+				PRODUCT_NAME = kaido;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -472,7 +474,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/gee";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/kaido.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/kaido";
 			};
 			name = Debug;
 		};
@@ -493,7 +495,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/gee";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/kaido.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/kaido";
 			};
 			name = Release;
 		};
@@ -512,7 +514,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = gee;
+				TEST_TARGET_NAME = kaido;
 			};
 			name = Debug;
 		};
@@ -531,7 +533,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = gee;
+				TEST_TARGET_NAME = kaido;
 			};
 			name = Release;
 		};
