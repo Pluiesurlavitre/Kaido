@@ -1,10 +1,3 @@
-//
-//  geeApp.swift
-//  gee
-//
-//  Created by Pluie on 23/04/2026.
-//
-
 import SwiftUI
 import SwiftData
 

@@ -1,10 +1,3 @@
-//
-//  geeUITestsLaunchTests.swift
-//  geeUITests
-//
-//  Created by Pluie on 23/04/2026.
-//
-
 import XCTest
 
 final class geeUITestsLaunchTests: XCTestCase {
