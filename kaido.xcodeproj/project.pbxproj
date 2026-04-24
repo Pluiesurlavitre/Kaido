@@ -30,19 +30,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7A7582FA2F9AA97A0033EAED /* gee */ = {
+		7A7582FA2F9AA97A0033EAED /* kaido */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = gee;
+			path = kaido;
 			sourceTree = "<group>";
 		};
-		7A75830A2F9AA97C0033EAED /* geeTests */ = {
+		7A75830A2F9AA97C0033EAED /* kaidoTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = geeTests;
+			path = kaidoTests;
 			sourceTree = "<group>";
 		};
-		7A7583142F9AA97C0033EAED /* geeUITests */ = {
+		7A7583142F9AA97C0033EAED /* kaidoUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = geeUITests;
+			path = kaidoUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		7A7582EF2F9AA97A0033EAED = {
 			isa = PBXGroup;
 			children = (
-				7A7582FA2F9AA97A0033EAED /* gee */,
-				7A75830A2F9AA97C0033EAED /* geeTests */,
-				7A7583142F9AA97C0033EAED /* geeUITests */,
+				7A7582FA2F9AA97A0033EAED /* kaido */,
+				7A75830A2F9AA97C0033EAED /* kaidoTests */,
+				7A7583142F9AA97C0033EAED /* kaidoUITests */,
 				7A7582F92F9AA97A0033EAED /* Products */,
 			);
 			sourceTree = "<group>";
@@ -108,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				7A7582FA2F9AA97A0033EAED /* gee */,
+				7A7582FA2F9AA97A0033EAED /* kaido */,
 			);
 			name = kaido;
 			packageProductDependencies = (
@@ -131,7 +131,7 @@
 				7A7583092F9AA97C0033EAED /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7A75830A2F9AA97C0033EAED /* geeTests */,
+				7A75830A2F9AA97C0033EAED /* kaidoTests */,
 			);
 			name = kaidoTests;
 			packageProductDependencies = (
@@ -154,7 +154,7 @@
 				7A7583132F9AA97C0033EAED /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7A7583142F9AA97C0033EAED /* geeUITests */,
+				7A7583142F9AA97C0033EAED /* kaidoUITests */,
 			);
 			name = kaidoUITests;
 			packageProductDependencies = (
