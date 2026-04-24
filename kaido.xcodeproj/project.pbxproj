@@ -25,8 +25,8 @@
 
 /* Begin PBXFileReference section */
 		7A7582F82F9AA97A0033EAED /* Kaido.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kaido.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A7583072F9AA97C0033EAED /* geeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = geeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A7583112F9AA97C0033EAED /* geeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = geeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A7583072F9AA97C0033EAED /* kaidoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kaidoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kaidoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -86,8 +86,8 @@
 			isa = PBXGroup;
 			children = (
 				7A7582F82F9AA97A0033EAED /* Kaido.app */,
-				7A7583072F9AA97C0033EAED /* geeTests.xctest */,
-				7A7583112F9AA97C0033EAED /* geeUITests.xctest */,
+				7A7583072F9AA97C0033EAED /* kaidoTests.xctest */,
+				7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7A7582F72F9AA97A0033EAED /* gee */ = {
+		7A7582F72F9AA97A0033EAED /* kaido */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7A75831B2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "gee" */;
+			buildConfigurationList = 7A75831B2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaido" */;
 			buildPhases = (
 				7A7582F42F9AA97A0033EAED /* Sources */,
 				7A7582F52F9AA97A0033EAED /* Frameworks */,
@@ -110,16 +110,16 @@
 			fileSystemSynchronizedGroups = (
 				7A7582FA2F9AA97A0033EAED /* gee */,
 			);
-			name = gee;
+			name = kaido;
 			packageProductDependencies = (
 			);
 			productName = gee;
 			productReference = 7A7582F82F9AA97A0033EAED /* Kaido.app */;
 			productType = "com.apple.product-type.application";
 		};
-		7A7583062F9AA97C0033EAED /* geeTests */ = {
+		7A7583062F9AA97C0033EAED /* kaidoTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7A75831E2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "geeTests" */;
+			buildConfigurationList = 7A75831E2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaidoTests" */;
 			buildPhases = (
 				7A7583032F9AA97C0033EAED /* Sources */,
 				7A7583042F9AA97C0033EAED /* Frameworks */,
@@ -133,16 +133,16 @@
 			fileSystemSynchronizedGroups = (
 				7A75830A2F9AA97C0033EAED /* geeTests */,
 			);
-			name = geeTests;
+			name = kaidoTests;
 			packageProductDependencies = (
 			);
 			productName = geeTests;
-			productReference = 7A7583072F9AA97C0033EAED /* geeTests.xctest */;
+			productReference = 7A7583072F9AA97C0033EAED /* kaidoTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		7A7583102F9AA97C0033EAED /* geeUITests */ = {
+		7A7583102F9AA97C0033EAED /* kaidoUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7A7583212F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "geeUITests" */;
+			buildConfigurationList = 7A7583212F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaidoUITests" */;
 			buildPhases = (
 				7A75830D2F9AA97C0033EAED /* Sources */,
 				7A75830E2F9AA97C0033EAED /* Frameworks */,
@@ -156,11 +156,11 @@
 			fileSystemSynchronizedGroups = (
 				7A7583142F9AA97C0033EAED /* geeUITests */,
 			);
-			name = geeUITests;
+			name = kaidoUITests;
 			packageProductDependencies = (
 			);
 			productName = geeUITests;
-			productReference = 7A7583112F9AA97C0033EAED /* geeUITests.xctest */;
+			productReference = 7A7583112F9AA97C0033EAED /* kaidoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				7A7582F72F9AA97A0033EAED /* gee */,
-				7A7583062F9AA97C0033EAED /* geeTests */,
-				7A7583102F9AA97C0033EAED /* geeUITests */,
+				7A7582F72F9AA97A0033EAED /* kaido */,
+				7A7583062F9AA97C0033EAED /* kaidoTests */,
+				7A7583102F9AA97C0033EAED /* kaidoUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		7A7583092F9AA97C0033EAED /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7A7582F72F9AA97A0033EAED /* gee */;
+			target = 7A7582F72F9AA97A0033EAED /* kaido */;
 			targetProxy = 7A7583082F9AA97C0033EAED /* PBXContainerItemProxy */;
 		};
 		7A7583132F9AA97C0033EAED /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7A7582F72F9AA97A0033EAED /* gee */;
+			target = 7A7582F72F9AA97A0033EAED /* kaido */;
 			targetProxy = 7A7583122F9AA97C0033EAED /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -547,7 +547,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7A75831B2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "gee" */ = {
+		7A75831B2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaido" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7A75831C2F9AA97C0033EAED /* Debug */,
@@ -556,7 +556,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7A75831E2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "geeTests" */ = {
+		7A75831E2F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaidoTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7A75831F2F9AA97C0033EAED /* Debug */,
@@ -565,7 +565,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7A7583212F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "geeUITests" */ = {
+		7A7583212F9AA97C0033EAED /* Build configuration list for PBXNativeTarget "kaidoUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7A7583222F9AA97C0033EAED /* Debug */,
