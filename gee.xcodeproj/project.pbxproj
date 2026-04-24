@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7A7582F82F9AA97A0033EAED /* gee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gee.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A7582F82F9AA97A0033EAED /* Kaido.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kaido.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A7583072F9AA97C0033EAED /* geeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = geeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A7583112F9AA97C0033EAED /* geeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = geeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,7 +85,7 @@
 		7A7582F92F9AA97A0033EAED /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7A7582F82F9AA97A0033EAED /* gee.app */,
+				7A7582F82F9AA97A0033EAED /* Kaido.app */,
 				7A7583072F9AA97C0033EAED /* geeTests.xctest */,
 				7A7583112F9AA97C0033EAED /* geeUITests.xctest */,
 			);
@@ -114,7 +114,7 @@
 			packageProductDependencies = (
 			);
 			productName = gee;
-			productReference = 7A7582F82F9AA97A0033EAED /* gee.app */;
+			productReference = 7A7582F82F9AA97A0033EAED /* Kaido.app */;
 			productType = "com.apple.product-type.application";
 		};
 		7A7583062F9AA97C0033EAED /* geeTests */ = {
@@ -394,6 +394,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -408,9 +409,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tristan-rollet.gee";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Kaido;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -426,6 +427,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -440,9 +442,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tristan-rollet.gee";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Kaido;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
